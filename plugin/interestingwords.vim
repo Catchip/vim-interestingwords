@@ -5,16 +5,25 @@
 
 let s:interestingWordsGUIColors = ['#aeee00', '#ff0000', '#0000ff', '#b88823', '#ffa724', '#ff2c4b']
 let s:interestingWordsTermColors = ['154', '121', '211', '137', '214', '222']
+let s:interestingWordsSave = 1
 
 let g:interestingWordsGUIColors = exists('g:interestingWordsGUIColors') ? g:interestingWordsGUIColors : s:interestingWordsGUIColors
 let g:interestingWordsTermColors = exists('g:interestingWordsTermColors') ? g:interestingWordsTermColors : s:interestingWordsTermColors
-
+let g:interestingWordsSave = exists('g:interestingWordsSave') ? g:interestingWordsSave : s:interestingWordsSave
 let s:hasBuiltColors = 0
+
+
+let s:path = $HOME.."/.config/nvim/tmp/interestingWords/"..substitute(expand('%:p'), '/','%','g')
+
 
 let s:interestingWords = []
 let s:interestingModes = []
 let s:mids = {}
 let s:recentlyUsed = []
+
+if !isdirectory($HOME .. "/.config/nvim/tmp/interestingWords")
+  call mkdir($HOME ..  "/.config/nvim/tmp/interestingWords")
+endif
 
 function! ColorWord(word, mode)
   if !(s:hasBuiltColors)
@@ -32,7 +41,6 @@ function! ColorWord(word, mode)
       call UncolorWord(s:interestingWords[n])
     endif
   endif
-
   let mid = 595129 + n
   let s:interestingWords[n] = a:word
   let s:interestingModes[n] = a:mode
@@ -201,6 +209,8 @@ function! s:uiMode()
       \ 'gui' : 'cterm'
 endfunction
 
+" if InterestingWordSave == 1, all colored words recover according to file
+" else
 " initialise highlight colors from list of GUIColors
 " initialise length of s:interestingWord list
 " initialise s:recentlyUsed list
@@ -208,6 +218,7 @@ function! s:buildColors()
   if (s:hasBuiltColors)
     return
   endif
+
   let ui = s:uiMode()
   let wordColors = (ui == 'gui') ? g:interestingWordsGUIColors : g:interestingWordsTermColors
   if (exists('g:interestingWordsRandomiseColors') && g:interestingWordsRandomiseColors)
@@ -231,14 +242,54 @@ function! s:buildColors()
     call add(s:recentlyUsed, currentIndex-1)
     let currentIndex += 1
   endfor
+
+  if (s:interestingWordsSave)
+    "recover from file
+    call s:Read()
+    call RecolorAllWords()
+    autocmd BufWinLeave * call s:Save()
+  endif
+
   let s:hasBuiltColors = 1
-endfunc
+endfunction
 
 " helper function to get random number between 0 and n-1 inclusive
 function! s:Random(n)
   let timestamp = reltimestr(reltime())[-2:]
   return float2nr(floor(a:n * timestamp/100))
 endfunction
+
+
+
+function! s:Save()
+  call writefile(s:interestingWords, s:path.."words")
+  call writefile(s:interestingModes, s:path.."modes")
+endfunction
+
+function! s:Read()
+  let i = 0
+  if file_readable(s:path.."words") && file_readable(s:path.."modes")
+    for line in readfile(s:path.."words")
+      if line == '0'
+        let line = 0
+      endif
+      let s:interestingWords[i] = line
+      let mid = 595129 + i
+      let s:mids[line] = mid
+      let i = i + 1
+    endfor
+    let i = 0
+    for line in readfile(s:path.."modes")
+      let s:interestingModes[i] = line
+      let i = i + 1
+    endfor
+  endif
+endfunction
+
+
+if g:interestingWordsSave
+  autocmd BufWinEnter * call s:buildColors()
+endif
 
 if !exists('g:interestingWordsDefaultMappings') || g:interestingWordsDefaultMappings != 0
     let g:interestingWordsDefaultMappings = 1

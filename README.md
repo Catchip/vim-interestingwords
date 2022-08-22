@@ -38,6 +38,7 @@ Finally, if you don't want to toggle every single highlighted word and want to c
 The plugin comes with those default mapping, but you can change it as you like:
 
 `let g:interestingWordsDefaultMappings = 0` if to disable default mapping
+`let g:interestingWordsSave = 1` if to enable highlighted words saving.
 
 ```vimscript
 nnoremap <silent> <leader>k :call InterestingWords('n')<cr>
