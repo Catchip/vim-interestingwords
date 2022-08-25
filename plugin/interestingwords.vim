@@ -18,6 +18,7 @@ let s:path = $HOME.."/.config/nvim/tmp/interestingWords/"..substitute(expand('%:
 
 let s:interestingWords = []
 let s:interestingModes = []
+let s:interestingColors = []
 let s:mids = {}
 let s:recentlyUsed = []
 
@@ -134,7 +135,7 @@ function! WordNavigation(direction)
   endif
 endfunction
 
-function! InterestingWords(mode) range
+function! InterestingWords(mode, recolor) range
   if a:mode == 'v'
     let currentWord = s:get_visual_selection()
   else
@@ -149,7 +150,33 @@ function! InterestingWords(mode) range
   if (index(s:interestingWords, currentWord) == -1)
     call ColorWord(currentWord, a:mode)
   else
-    call UncolorWord(currentWord)
+    if a:recolor == 1
+      call ChangecolorWord(currentWord)
+    else
+      call UncolorWord(currentWord)
+    endif
+  endif
+endfunction
+
+function! ChangecolorWord(word)
+  let n = index(s:interestingWords, a:word)
+  let ui = s:uiMode()
+  if (n == -1)
+    return
+  endif
+  let Color = GenerateColor(ui)
+  "let Color = (ui == 'gui') ? g:interestingWordsGUIColors[4] : g:interestingWordsTermColors[4]
+  let s:interestingColors[n] = Color
+
+  let n = n + 1
+  execute 'hi! InterestingWord' . n . ' ' . ui . 'bg=' . Color . ' ' . ui . 'fg=Black'
+endfunction
+
+function! GenerateColor(ui)
+  if a:ui == "gui"
+    return printf("#%x",rand() % 16777216)
+  else
+    return string(rand() % 256)
   endif
 endfunction
 
@@ -220,22 +247,33 @@ function! s:buildColors()
   endif
 
   let ui = s:uiMode()
-  let wordColors = (ui == 'gui') ? g:interestingWordsGUIColors : g:interestingWordsTermColors
-  if (exists('g:interestingWordsRandomiseColors') && g:interestingWordsRandomiseColors)
-    " fisher-yates shuffle
-    let i = len(wordColors)-1
-    while i > 0
-      let j = s:Random(i)
-      let temp = wordColors[i]
-      let wordColors[i] = wordColors[j]
-      let wordColors[j] = temp
-      let i -= 1
-    endwhile
+
+  " If Save mode is up, colors initialise from file
+  if s:interestingWordsSave && file_readable(s:path.."colors")
+    for line in readfile(s:path.."colors")
+      call add(s:interestingColors, line)
+    endfor
   endif
+    
+  if len(s:interestingColors) == 0
+    let s:interestingColors = (ui == 'gui') ? g:interestingWordsGUIColors : g:interestingWordsTermColors
+    if (exists('g:interestingWordsRandomiseColors') && g:interestingWordsRandomiseColors)
+      " fisher-yates shuffle
+      let i = len(s:interestingColors)-1
+      while i > 0
+        let j = s:Random(i)
+        let temp = s:interestingColors[i]
+        let s:interestingColors[i] = s:interestingColors[j]
+        let s:interestingColors[j] = temp
+        let i -= 1
+      endwhile
+    endif
+  endif
+
   " select ui type
   " highlight group indexed from 1
   let currentIndex = 1
-  for wordColor in wordColors
+  for wordColor in s:interestingColors
     execute 'hi! def InterestingWord' . currentIndex . ' ' . ui . 'bg=' . wordColor . ' ' . ui . 'fg=Black'
     call add(s:interestingWords, 0)
     call add(s:interestingModes, 'n')
@@ -243,7 +281,7 @@ function! s:buildColors()
     let currentIndex += 1
   endfor
 
-  if (s:interestingWordsSave)
+  if s:interestingWordsSave
     "recover from file
     call s:Read()
     call RecolorAllWords()
@@ -260,10 +298,10 @@ function! s:Random(n)
 endfunction
 
 
-
 function! s:Save()
   call writefile(s:interestingWords, s:path.."words")
   call writefile(s:interestingModes, s:path.."modes")
+  call writefile(s:interestingColors, s:path.."colors")
 endfunction
 
 function! s:Read()
@@ -296,8 +334,10 @@ if !exists('g:interestingWordsDefaultMappings') || g:interestingWordsDefaultMapp
 endif
 
 if g:interestingWordsDefaultMappings && !hasmapto('<Plug>InterestingWords')
-    nnoremap <silent> <leader>k :call InterestingWords('n')<cr>
-    vnoremap <silent> <leader>k :call InterestingWords('v')<cr>
+    nnoremap <silent> <leader>k :call InterestingWords('n', 0)<cr>
+    vnoremap <silent> <leader>k :call InterestingWords('v', 0)<cr>
+    nnoremap <silent> <leader>j :call InterestingWords('n', 1)<cr>
+    vnoremap <silent> <leader>j :call InterestingWords('v', 1)<cr>
     nnoremap <silent> <leader>K :call UncolorAllWords()<cr>
 
     nnoremap <silent> n :call WordNavigation(1)<cr>
@@ -307,9 +347,9 @@ endif
 if g:interestingWordsDefaultMappings
    try
       nnoremap <silent> <unique> <script> <Plug>InterestingWords
-               \ :call InterestingWords('n')<cr>
+               \ :call InterestingWords('n', 0)<cr>
       vnoremap <silent> <unique> <script> <Plug>InterestingWords
-               \ :call InterestingWords('v')<cr>
+               \ :call InterestingWords('v', 0)<cr>
       nnoremap <silent> <unique> <script> <Plug>InterestingWordsClear
                \ :call UncolorAllWords()<cr>
       nnoremap <silent> <unique> <script> <Plug>InterestingWordsForeward

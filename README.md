@@ -38,11 +38,21 @@ Finally, if you don't want to toggle every single highlighted word and want to c
 The plugin comes with those default mapping, but you can change it as you like:
 
 `let g:interestingWordsDefaultMappings = 0` if to disable default mapping
+
 `let g:interestingWordsSave = 1` if to enable highlighted words saving.
 
+
 ```vimscript
-nnoremap <silent> <leader>k :call InterestingWords('n')<cr>
-vnoremap <silent> <leader>k :call InterestingWords('v')<cr>
+" highlight and unhighlight
+nnoremap <silent> <leader>k :call InterestingWords('n', 0)<cr>
+vnoremap <silent> <leader>k :call InterestingWords('v', 0)<cr>
+
+
+" Change to a random color
+vnoremap <silent> <leader>j :call InterestingWords('v', 0)<cr>
+vnoremap <silent> <leader>j :call InterestingWords('v', 0)<cr>
+
+
 nnoremap <silent> <leader>K :call UncolorAllWords()<cr>
 
 nnoremap <silent> n :call WordNavigation(1)<cr>
