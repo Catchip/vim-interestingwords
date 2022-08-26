@@ -34,13 +34,20 @@ function! ColorWord(word, mode)
   " gets the lowest unused index
   let n = index(s:interestingWords, 0)
   if (n == -1)
-    if !(exists('g:interestingWordsCycleColors') && g:interestingWordsCycleColors)
-      echom "InterestingWords: max number of highlight groups reached " . len(s:interestingWords)
-      return
-    else
-      let n = s:recentlyUsed[0]
-      call UncolorWord(s:interestingWords[n])
-    endif
+    "if !(exists('g:interestingWordsCycleColors') && g:interestingWordsCycleColors)
+      "echom "InterestingWords: max number of highlight groups reached " . len(s:interestingWords)
+      "return
+    "else
+      "let n = s:recentlyUsed[0]
+      "call UncolorWord(s:interestingWords[n])
+    "endif
+    call add(s:interestingWords, 0)
+    call add(s:interestingModes, 'n')
+    let ui = s:uiMode()
+    let Color = GenerateColor(ui)
+    call add(s:interestingColors, Color)
+    let n = index(s:interestingWords, 0)
+    execute 'hi! def InterestingWord' . (n+1) . ' ' . ui . 'bg=' . Color . ' ' . ui . 'fg=Black'
   endif
   let mid = 595129 + n
   let s:interestingWords[n] = a:word
